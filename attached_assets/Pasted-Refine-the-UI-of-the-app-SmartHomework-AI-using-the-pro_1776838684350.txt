@@ -1,0 +1,73 @@
+Refine the UI of the app “SmartHomework AI” using the provided reference image as inspiration. The design should match the overall style, tone, and visual language of the reference while still allowing creative freedom to improve usability, clarity, and modern UX standards.
+
+The final result must include ALL screens of the app fully designed with consistent styling.
+
+Design Approach:
+Use the reference image as a style and layout inspiration, not a strict template
+Maintain a modern, minimal, student-friendly UI
+Improve spacing, hierarchy, readability, and usability where needed
+Ensure consistency across every screen
+Allow creative freedom to enhance UI/UX as long as it matches the same design language
+Mandatory Requirement:
+
+Design the UI for ALL SCREENS OF THE APP, including but not limited to:
+
+Welcome / Landing Screen
+Login / Sign Up Screen
+Guest Mode Entry Screen
+Home Dashboard
+Homework Scanner (Camera Screen)
+AI Results / Solution Screen
+Step-by-Step Learning Mode
+Study Mode (Deep Learning Interface)
+Flashcards Screen
+AI Tutor Chat Screen
+Homework Planner / Calendar Screen
+Study Groups List Screen
+Study Group Detail Screen (chat + shared tasks + files)
+Profile Screen
+Settings Screen
+Google Account Linking Screen
+Authentication System:
+Clean onboarding flow:
+“Sign in / Sign up”
+“Continue as Guest”
+Google login integration using Google Accounts
+Fast, minimal steps (no unnecessary screens)
+Study Groups Feature:
+Users can:
+Create groups
+Join via invite/link
+Chat with classmates
+Share files and homework
+Group UI should feel like a lightweight classroom workspace
+Google Integration:
+Allow linking Google account for:
+Email-based invites
+Contact syncing
+Optional calendar integration
+Show clear “Connected / Not Connected” states
+Remove:
+Do NOT include gamification elements
+No XP
+No badges
+No streaks
+No leaderboards
+Navigation System:
+Bottom navigation bar (mobile):
+Home
+Scan
+Study
+Groups
+Profile
+Keep icons simple, modern, and consistent
+Highlight active tab clearly
+UX & Visual Style:
+Clean, modern, minimal aesthetic
+Soft colors, rounded corners, subtle shadows
+Strong visual hierarchy
+Smooth transitions between screens
+Calm, focused academic tone
+Goal:
+
+Create a fully complete multi-screen UI design that feels like a real production-ready educational app—consistent, intuitive, and inspired by the reference image while improved for usability and modern standards.
