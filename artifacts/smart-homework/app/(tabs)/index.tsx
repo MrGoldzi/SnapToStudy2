@@ -94,7 +94,7 @@ export default function HomeScreen() {
             { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
           ]}
         >
-          <GlowingOrb size={240} />
+          <GlowingOrb maxFraction={0.5} maxSize={220} />
           <Text style={[styles.orbHint, { color: colors.mutedForeground }]}>
             Tap to start a tutor chat
           </Text>

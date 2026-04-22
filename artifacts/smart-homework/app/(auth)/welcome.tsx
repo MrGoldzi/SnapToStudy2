@@ -49,7 +49,7 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={{ alignItems: "center", gap: 36 }}>
-          <GlowingOrb size={260} />
+          <GlowingOrb maxFraction={0.6} maxSize={240} />
           <View style={{ alignItems: "center", gap: 14 }}>
             <Text style={[styles.heading, { color: colors.foreground }]}>
               Your Smart{"\n"}Study Companion
