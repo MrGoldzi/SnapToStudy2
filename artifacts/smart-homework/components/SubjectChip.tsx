@@ -2,21 +2,23 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { useColors } from "@/hooks/useColors";
 import { Subject, SUBJECTS } from "@/lib/types";
 
 const SUBJECT_HUES: Record<Subject, string> = {
-  math: "#6366f1",
+  math: "#8b5cf6",
+  physics: "#3b82f6",
+  chemistry: "#22d3ee",
+  biology: "#22c55e",
   science: "#10b981",
   english: "#f59e0b",
   history: "#ef4444",
-  language: "#8b5cf6",
+  language: "#a78bfa",
   art: "#ec4899",
-  other: "#64748b",
+  other: "#94a3b8",
 };
 
 export function subjectColor(s: Subject): string {
-  return SUBJECT_HUES[s];
+  return SUBJECT_HUES[s] ?? SUBJECT_HUES.other;
 }
 
 export function subjectMeta(s: Subject) {
@@ -30,7 +32,6 @@ export function SubjectChip({
   subject: Subject;
   small?: boolean;
 }) {
-  const colors = useColors();
   const meta = subjectMeta(subject);
   const hue = subjectColor(subject);
   return (
@@ -38,7 +39,7 @@ export function SubjectChip({
       style={[
         styles.chip,
         {
-          backgroundColor: hue + "22",
+          backgroundColor: hue + "26",
           paddingVertical: small ? 4 : 6,
           paddingHorizontal: small ? 8 : 10,
         },
@@ -50,10 +51,7 @@ export function SubjectChip({
         color={hue}
       />
       <Text
-        style={[
-          styles.text,
-          { color: hue, fontSize: small ? 11 : 12 },
-        ]}
+        style={[styles.text, { color: hue, fontSize: small ? 11 : 12 }]}
       >
         {meta.label}
       </Text>

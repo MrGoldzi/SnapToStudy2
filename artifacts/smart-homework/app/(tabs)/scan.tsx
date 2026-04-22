@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -17,7 +18,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Pressable } from "@/components/Pressable";
-import { PrimaryButton } from "@/components/PrimaryButton";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
@@ -27,7 +27,7 @@ export default function ScanScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state, addScan, deleteScan, awardXp } = useApp();
+  const { state, addScan, deleteScan } = useApp();
   const [busy, setBusy] = useState(false);
   const tabBarHeight = Platform.OS === "web" ? 84 : 90;
 
@@ -45,7 +45,6 @@ export default function ScanScreen() {
         imageMimeType: mime,
       });
       const scan = addScan({ imageUri: asset.uri, content });
-      awardXp(15);
       router.push(`/scan-result?id=${scan.id}` as any);
     } catch (err) {
       Alert.alert(
@@ -90,8 +89,8 @@ export default function ScanScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScreenHeader
-        title="Scan Homework"
-        subtitle="Snap a photo, get step-by-step solutions"
+        title="Scanner"
+        subtitle="Snap a problem, get a solution"
       />
       <ScrollView
         contentContainerStyle={{
@@ -101,47 +100,60 @@ export default function ScanScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <Card style={{ padding: 24, alignItems: "center" }}>
-          <View
-            style={[
-              styles.scanIcon,
-              { backgroundColor: colors.primary + "1f" },
-            ]}
-          >
-            {busy ? (
-              <ActivityIndicator color={colors.primary} size="large" />
-            ) : (
-              <Feather name="camera" size={36} color={colors.primary} />
-            )}
-          </View>
-          <Text style={[styles.scanTitle, { color: colors.foreground }]}>
-            {busy ? "Reading your homework…" : "Capture a problem"}
-          </Text>
-          <Text style={[styles.scanSub, { color: colors.mutedForeground }]}>
-            {busy
-              ? "Our tutor is breaking it down step by step."
-              : "Works for math, science, essays, worksheets, and more."}
-          </Text>
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 18, width: "100%" }}>
-            <PrimaryButton
-              title="Camera"
-              icon="camera"
+        <View style={styles.heroWrap}>
+          <LinearGradient
+            colors={["#1d4ed8", "#0b1130"]}
+            style={[StyleSheet.absoluteFill, { borderRadius: 24 }]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+          <View style={{ alignItems: "center", padding: 28, gap: 16 }}>
+            <Pressable
+              haptic="medium"
               onPress={takePhoto}
-              loading={busy}
-              style={{ flex: 1 }}
-            />
-            <PrimaryButton
-              title="Gallery"
-              icon="image"
-              variant="secondary"
+              disabled={busy}
+              style={({ pressed }) => [
+                styles.shutter,
+                {
+                  borderColor: "#ffffff44",
+                  opacity: busy ? 0.6 : pressed ? 0.85 : 1,
+                  transform: [{ scale: pressed ? 0.96 : 1 }],
+                },
+              ]}
+            >
+              <View style={[styles.shutterInner, { backgroundColor: "#ffffffea" }]}>
+                {busy ? (
+                  <ActivityIndicator color="#0b1130" size="large" />
+                ) : (
+                  <Feather name="camera" size={34} color="#0b1130" />
+                )}
+              </View>
+            </Pressable>
+            <Text style={styles.shutterTitle}>
+              {busy ? "Reading your homework…" : "Tap to scan"}
+            </Text>
+            <Text style={styles.shutterSub}>
+              Math, science, essays, worksheets — point and learn.
+            </Text>
+            <Pressable
+              haptic="selection"
               onPress={pickPhoto}
               disabled={busy}
-              style={{ flex: 1 }}
-            />
+              style={({ pressed }) => [
+                styles.galleryBtn,
+                {
+                  backgroundColor: "#ffffff1c",
+                  opacity: busy ? 0.6 : pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <Feather name="image" size={16} color="#fff" />
+              <Text style={styles.galleryText}>Choose from gallery</Text>
+            </Pressable>
           </View>
-        </Card>
+        </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginTop: 6 }}>
           <Text style={[styles.section, { color: colors.foreground }]}>
             Recent scans
           </Text>
@@ -156,7 +168,7 @@ export default function ScanScreen() {
           <EmptyState
             icon="camera"
             title="No scans yet"
-            message="Your scanned problems and solutions will appear here for quick review."
+            message="Your scanned problems and step-by-step solutions will appear here."
           />
         ) : (
           state.scans.map((s) => (
@@ -175,7 +187,7 @@ export default function ScanScreen() {
             >
               <Image
                 source={{ uri: s.imageUri }}
-                style={styles.thumb}
+                style={[styles.thumb, { backgroundColor: colors.surface }]}
                 contentFit="cover"
               />
               <View style={{ flex: 1, gap: 4 }}>
@@ -221,31 +233,57 @@ function timeAgo(ts: number): string {
 }
 
 const styles = StyleSheet.create({
-  scanIcon: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
+  heroWrap: {
+    borderRadius: 24,
+    overflow: "hidden",
+  },
+  shutter: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    borderWidth: 6,
   },
-  scanTitle: {
+  shutterInner: {
+    width: 102,
+    height: 102,
+    borderRadius: 51,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shutterTitle: {
+    color: "#fff",
     fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    textAlign: "center",
+    fontSize: 22,
     letterSpacing: -0.3,
   },
-  scanSub: {
+  shutterSub: {
+    color: "#ffffffbb",
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     textAlign: "center",
-    marginTop: 6,
     lineHeight: 19,
+    paddingHorizontal: 12,
+  },
+  galleryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    marginTop: 4,
+  },
+  galleryText: {
+    color: "#fff",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
   },
   section: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
-    marginTop: 6,
+    marginTop: 4,
   },
   subtle: {
     fontFamily: "Inter_400Regular",
@@ -263,7 +301,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 10,
-    backgroundColor: "#0001",
   },
   scanLine: {
     fontFamily: "Inter_500Medium",

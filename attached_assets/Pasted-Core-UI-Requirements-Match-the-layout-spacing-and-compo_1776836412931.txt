@@ -1,0 +1,74 @@
+Core UI Requirements:
+Match the layout, spacing, and component structure of the reference image
+Use a modern, minimal color palette (soft neutrals + 1–2 accent colors)
+Rounded corners, subtle shadows, and smooth transitions
+Clear typography with strong hierarchy (headings, subheadings, body text)
+Mobile-first design, but scalable to tablet/web
+Authentication Flow:
+
+Add a simple and intuitive login system:
+
+Welcome Screen with:
+App logo and tagline
+Two main options:
+“Sign in / Sign up”
+“Continue as Guest”
+Sign-In Options:
+Email + password
+Google sign-in (integration with Google Accounts)
+Keep the process fast and minimal (1–2 steps max)
+Remove Feature:
+Completely remove gamification elements:
+No points, XP, badges, streaks, or levels
+Replace with a more focused and academic tone
+New Features to Add (UI + UX):
+1. Study Group System
+Create or join study groups
+Group dashboard UI includes:
+Shared tasks
+Group chat
+Shared resources/files
+Clean card-based layout for groups
+Show active members and status
+2. Google Email Linking
+Allow users to connect their Google account:
+Sync contacts for inviting classmates
+Easy group invites via email
+Show a “Connected” state in settings
+One-tap invite system using Google contacts
+Navigation Structure:
+Bottom navigation bar (mobile):
+Home
+Scan
+Study
+Groups
+Profile
+Keep icons simple and consistent
+Highlight active tab clearly
+Key Screens to Refine:
+Home Dashboard
+Overview of tasks and recent scans
+Clean cards and quick actions
+Scanner Screen
+Large camera area
+Minimal UI distractions
+Clear capture button
+Study Mode
+Step-by-step layout
+Easy-to-read explanations
+Progress indicator
+Groups Screen
+List of study groups
+“Create Group” button
+Invitations & join requests
+Profile & Settings
+Account info
+Google account connection
+App preferences
+UX Tone:
+Calm, focused, and academic
+Encourage productivity, not competition
+Reduce clutter and distractions
+Goal:
+
+Create a UI that feels like a professional study tool, not a game—simple, collaborative, and highly usable for students.

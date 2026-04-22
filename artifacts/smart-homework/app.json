@@ -1,27 +1,32 @@
 {
   "expo": {
-    "name": "SmartHomework AI",
-    "slug": "smart-homework",
+    "name": "SnapToStudy",
+    "slug": "snaptostudy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "smart-homework",
-    "userInterfaceStyle": "automatic",
+    "scheme": "snaptostudy",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0f0a1f"
+      "backgroundColor": "#070b1a"
     },
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "NSCameraUsageDescription": "SmartHomework AI uses your camera to scan homework problems and get step-by-step solutions.",
-        "NSPhotoLibraryUsageDescription": "SmartHomework AI needs access to your photos so you can scan saved homework images."
-      }
+        "NSCameraUsageDescription": "SnapToStudy uses your camera to scan homework problems and get step-by-step solutions.",
+        "NSPhotoLibraryUsageDescription": "SnapToStudy needs access to your photos so you can scan saved homework images."
+      },
+      "bundleIdentifier": "com.snaptostudy.app"
     },
     "android": {
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "package": "com.snaptostudy.app"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -38,8 +43,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "SmartHomework AI needs access to your photos so you can scan saved homework images.",
-          "cameraPermission": "SmartHomework AI uses your camera to scan homework problems and get step-by-step solutions."
+          "photosPermission": "SnapToStudy needs access to your photos so you can scan saved homework images.",
+          "cameraPermission": "SnapToStudy uses your camera to scan homework problems and get step-by-step solutions."
         }
       ]
     ],

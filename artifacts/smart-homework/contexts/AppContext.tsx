@@ -15,37 +15,50 @@ import {
   ChatTurn,
   Deck,
   Flashcard,
+  GroupMessage,
   ScanResult,
-  Stats,
+  StudyGroup,
   Subject,
-  dayDiff,
-  todayKey,
+  User,
 } from "@/lib/types";
 
-const STORAGE_KEY = "smart-homework-state-v1";
+const STORAGE_KEY = "snaptostudy-state-v2";
 
 type State = {
+  user: User | null;
   assignments: Assignment[];
   decks: Deck[];
   cards: Flashcard[];
   chat: ChatTurn[];
   scans: ScanResult[];
-  stats: Stats;
+  groups: StudyGroup[];
+  messages: GroupMessage[];
   hydrated: boolean;
 };
 
 const defaultState: State = {
+  user: null,
   assignments: [],
   decks: [],
   cards: [],
   chat: [],
   scans: [],
-  stats: { xp: 0, level: 1, streak: 0, lastActiveDay: "" },
+  groups: [],
+  messages: [],
   hydrated: false,
 };
 
 type Ctx = {
   state: State;
+  // Auth
+  signInGuest: () => User;
+  signUpEmail: (name: string, email: string) => User;
+  signInEmail: (email: string) => User | null;
+  signInGoogle: (name: string, email: string) => User;
+  linkGoogle: (email: string) => void;
+  unlinkGoogle: () => void;
+  updateProfile: (patch: Partial<Pick<User, "name" | "email">>) => void;
+  signOut: () => void;
   // Assignments
   addAssignment: (a: Omit<Assignment, "id" | "createdAt" | "done">) => Assignment;
   updateAssignment: (id: string, patch: Partial<Assignment>) => void;
@@ -66,17 +79,45 @@ type Ctx = {
   // Scans
   addScan: (s: Omit<ScanResult, "id" | "createdAt">) => ScanResult;
   deleteScan: (id: string) => void;
-  // XP
-  awardXp: (amount: number) => void;
+  // Groups
+  createGroup: (
+    g: Omit<StudyGroup, "id" | "createdAt" | "inviteCode" | "members" | "ownerId">,
+  ) => StudyGroup;
+  joinGroupByCode: (code: string) => StudyGroup | null;
+  leaveGroup: (id: string) => void;
+  postMessage: (
+    groupId: string,
+    content: string,
+    attachment?: GroupMessage["attachment"],
+  ) => GroupMessage;
 };
 
 const AppCtx = createContext<Ctx | null>(null);
+
+function genInvite(): string {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+}
+
+const SAMPLE_PEERS = [
+  "Maya Chen",
+  "Devon Reyes",
+  "Aarav Patel",
+  "Lina Kowalski",
+  "Sam Okafor",
+  "Priya Singh",
+  "Noah Brooks",
+  "Zara Hassan",
+];
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<State>(defaultState);
   const dirtyRef = useRef(false);
 
-  // Hydrate
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -85,18 +126,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled && raw) {
           const parsed = JSON.parse(raw) as Partial<State>;
           setState({
+            user: parsed.user ?? null,
             assignments: parsed.assignments ?? [],
             decks: parsed.decks ?? [],
             cards: parsed.cards ?? [],
             chat: parsed.chat ?? [],
             scans: parsed.scans ?? [],
-            stats:
-              parsed.stats ?? {
-                xp: 0,
-                level: 1,
-                streak: 0,
-                lastActiveDay: "",
-              },
+            groups: parsed.groups ?? [],
+            messages: parsed.messages ?? [],
             hydrated: true,
           });
         } else if (!cancelled) {
@@ -111,54 +148,102 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Persist
   useEffect(() => {
     if (!state.hydrated) return;
     if (!dirtyRef.current) {
       dirtyRef.current = true;
       return;
     }
-    const toSave = { ...state, hydrated: undefined };
+    const { hydrated: _h, ...toSave } = state;
+    void _h;
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
   }, [state]);
 
-  const updateStreak = useCallback((s: State): State => {
-    const today = todayKey();
-    if (s.stats.lastActiveDay === today) return s;
-    const diff = s.stats.lastActiveDay
-      ? dayDiff(today, s.stats.lastActiveDay)
-      : 0;
-    let streak = s.stats.streak;
-    if (!s.stats.lastActiveDay) streak = 1;
-    else if (diff === 1) streak = streak + 1;
-    else if (diff > 1) streak = 1;
-    return {
-      ...s,
-      stats: { ...s.stats, streak, lastActiveDay: today },
+  // ===== AUTH =====
+  const signInGuest: Ctx["signInGuest"] = useCallback(() => {
+    const u: User = {
+      id: newId(),
+      name: "Guest",
+      email: "",
+      isGuest: true,
+      googleLinked: false,
+      createdAt: Date.now(),
     };
+    setState((s) => ({ ...s, user: u }));
+    return u;
   }, []);
 
-  const awardXp = useCallback(
-    (amount: number) => {
-      setState((s) => {
-        const xp = s.stats.xp + amount;
-        let level = 1;
-        let remaining = xp;
-        const need = (l: number) => 100 + (l - 1) * 50;
-        while (remaining >= need(level)) {
-          remaining -= need(level);
-          level += 1;
-        }
-        const next = updateStreak({
-          ...s,
-          stats: { ...s.stats, xp, level },
-        });
-        return next;
-      });
-    },
-    [updateStreak],
-  );
+  const signUpEmail: Ctx["signUpEmail"] = useCallback((name, email) => {
+    const u: User = {
+      id: newId(),
+      name: name.trim() || "Student",
+      email: email.trim().toLowerCase(),
+      isGuest: false,
+      googleLinked: false,
+      createdAt: Date.now(),
+    };
+    setState((s) => ({ ...s, user: u }));
+    return u;
+  }, []);
 
+  const signInEmail: Ctx["signInEmail"] = useCallback((email) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return null;
+    const u: User = {
+      id: newId(),
+      name: trimmed.split("@")[0],
+      email: trimmed,
+      isGuest: false,
+      googleLinked: false,
+      createdAt: Date.now(),
+    };
+    setState((s) => ({ ...s, user: u }));
+    return u;
+  }, []);
+
+  const signInGoogle: Ctx["signInGoogle"] = useCallback((name, email) => {
+    const u: User = {
+      id: newId(),
+      name: name.trim() || email.split("@")[0],
+      email: email.trim().toLowerCase(),
+      isGuest: false,
+      googleLinked: true,
+      createdAt: Date.now(),
+    };
+    setState((s) => ({ ...s, user: u }));
+    return u;
+  }, []);
+
+  const linkGoogle: Ctx["linkGoogle"] = useCallback((email) => {
+    setState((s) =>
+      s.user
+        ? {
+            ...s,
+            user: {
+              ...s.user,
+              googleLinked: true,
+              email: email.trim().toLowerCase() || s.user.email,
+            },
+          }
+        : s,
+    );
+  }, []);
+
+  const unlinkGoogle: Ctx["unlinkGoogle"] = useCallback(() => {
+    setState((s) =>
+      s.user ? { ...s, user: { ...s.user, googleLinked: false } } : s,
+    );
+  }, []);
+
+  const updateProfile: Ctx["updateProfile"] = useCallback((patch) => {
+    setState((s) => (s.user ? { ...s, user: { ...s.user, ...patch } } : s));
+  }, []);
+
+  const signOut: Ctx["signOut"] = useCallback(() => {
+    setState((s) => ({ ...s, user: null }));
+  }, []);
+
+  // ===== ASSIGNMENTS =====
   const addAssignment: Ctx["addAssignment"] = useCallback((a) => {
     const newA: Assignment = {
       ...a,
@@ -179,39 +264,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
-  const toggleAssignment: Ctx["toggleAssignment"] = useCallback(
-    (id) => {
-      setState((s) => {
-        const next = s.assignments.map((a) =>
-          a.id === id
-            ? {
-                ...a,
-                done: !a.done,
-                completedAt: !a.done ? Date.now() : undefined,
-              }
-            : a,
-        );
-        const target = s.assignments.find((a) => a.id === id);
-        const justCompleted = target && !target.done;
-        const xpDelta = justCompleted ? 25 : 0;
-        let updated: State = { ...s, assignments: next };
-        if (xpDelta > 0) {
-          const xp = updated.stats.xp + xpDelta;
-          let level = 1;
-          let remaining = xp;
-          const need = (l: number) => 100 + (l - 1) * 50;
-          while (remaining >= need(level)) {
-            remaining -= need(level);
-            level += 1;
-          }
-          updated = { ...updated, stats: { ...updated.stats, xp, level } };
-          updated = updateStreak(updated);
-        }
-        return updated;
-      });
-    },
-    [updateStreak],
-  );
+  const toggleAssignment: Ctx["toggleAssignment"] = useCallback((id) => {
+    setState((s) => ({
+      ...s,
+      assignments: s.assignments.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              done: !a.done,
+              completedAt: !a.done ? Date.now() : undefined,
+            }
+          : a,
+      ),
+    }));
+  }, []);
 
   const deleteAssignment: Ctx["deleteAssignment"] = useCallback((id) => {
     setState((s) => ({
@@ -220,6 +286,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  // ===== DECKS / CARDS =====
   const addDeck: Ctx["addDeck"] = useCallback((name, subject) => {
     const deck: Deck = { id: newId(), name, subject, createdAt: Date.now() };
     setState((s) => ({ ...s, decks: [...s.decks, deck] }));
@@ -251,58 +318,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return newCards;
   }, []);
 
-  // SM-2 lite spaced repetition
-  const reviewCard: Ctx["reviewCard"] = useCallback(
-    (id, quality) => {
-      setState((s) => {
-        const cards = s.cards.map((c) => {
-          if (c.id !== id) return c;
-          let { ease, interval } = c;
-          if (quality < 3) {
-            interval = 0;
-            ease = Math.max(1.3, ease - 0.2);
-          } else {
-            if (interval === 0) interval = 1;
-            else if (interval === 1) interval = 3;
-            else interval = Math.round(interval * ease);
-            ease = Math.max(
-              1.3,
-              ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)),
-            );
-          }
-          const dueAt = Date.now() + interval * 86400000;
-          return {
-            ...c,
-            ease,
-            interval,
-            dueAt,
-            lastReviewedAt: Date.now(),
-            reviews: c.reviews + 1,
-            correct: c.correct + (quality >= 3 ? 1 : 0),
-          };
-        });
-        let next: State = { ...s, cards };
-        const xpDelta = quality >= 3 ? 5 : 2;
-        const xp = next.stats.xp + xpDelta;
-        let level = 1;
-        let remaining = xp;
-        const need = (l: number) => 100 + (l - 1) * 50;
-        while (remaining >= need(level)) {
-          remaining -= need(level);
-          level += 1;
+  const reviewCard: Ctx["reviewCard"] = useCallback((id, quality) => {
+    setState((s) => {
+      const cards = s.cards.map((c) => {
+        if (c.id !== id) return c;
+        let { ease, interval } = c;
+        if (quality < 3) {
+          interval = 0;
+          ease = Math.max(1.3, ease - 0.2);
+        } else {
+          if (interval === 0) interval = 1;
+          else if (interval === 1) interval = 3;
+          else interval = Math.round(interval * ease);
+          ease = Math.max(
+            1.3,
+            ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)),
+          );
         }
-        next = { ...next, stats: { ...next.stats, xp, level } };
-        next = updateStreak(next);
-        return next;
+        const dueAt = Date.now() + interval * 86400000;
+        return {
+          ...c,
+          ease,
+          interval,
+          dueAt,
+          lastReviewedAt: Date.now(),
+          reviews: c.reviews + 1,
+          correct: c.correct + (quality >= 3 ? 1 : 0),
+        };
       });
-    },
-    [updateStreak],
-  );
+      return { ...s, cards };
+    });
+  }, []);
 
   const deleteCard: Ctx["deleteCard"] = useCallback((id) => {
     setState((s) => ({ ...s, cards: s.cards.filter((c) => c.id !== id) }));
   }, []);
 
+  // ===== CHAT =====
   const addChatTurn: Ctx["addChatTurn"] = useCallback((turn) => {
     const t: ChatTurn = { ...turn, id: newId(), createdAt: Date.now() };
     setState((s) => ({ ...s, chat: [...s.chat, t] }));
@@ -313,6 +365,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, chat: [] }));
   }, []);
 
+  // ===== SCANS =====
   const addScan: Ctx["addScan"] = useCallback((s) => {
     const scan: ScanResult = { ...s, id: newId(), createdAt: Date.now() };
     setState((st) => ({ ...st, scans: [scan, ...st.scans] }));
@@ -323,9 +376,126 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, scans: s.scans.filter((x) => x.id !== id) }));
   }, []);
 
+  // ===== GROUPS =====
+  const createGroup: Ctx["createGroup"] = useCallback((g) => {
+    let created!: StudyGroup;
+    setState((s) => {
+      const me = s.user;
+      const myMember = me
+        ? { id: me.id, name: me.name || "You", isYou: true as const }
+        : { id: "you", name: "You", isYou: true as const };
+      created = {
+        ...g,
+        id: newId(),
+        ownerId: me?.id ?? "you",
+        inviteCode: genInvite(),
+        members: [myMember],
+        createdAt: Date.now(),
+      };
+      return { ...s, groups: [created, ...s.groups] };
+    });
+    return created;
+  }, []);
+
+  const joinGroupByCode: Ctx["joinGroupByCode"] = useCallback((code) => {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) return null;
+    let joined: StudyGroup | null = null;
+    setState((s) => {
+      const existing = s.groups.find((g) => g.inviteCode === trimmed);
+      if (existing) {
+        joined = existing;
+        if (existing.members.some((m) => m.isYou)) return s;
+        const me = s.user;
+        const myMember = me
+          ? { id: me.id, name: me.name || "You", isYou: true as const }
+          : { id: "you", name: "You", isYou: true as const };
+        return {
+          ...s,
+          groups: s.groups.map((g) =>
+            g.id === existing.id
+              ? { ...g, members: [...g.members, myMember] }
+              : g,
+          ),
+        };
+      }
+      const me = s.user;
+      const myMember = me
+        ? { id: me.id, name: me.name || "You", isYou: true as const }
+        : { id: "you", name: "You", isYou: true as const };
+      const peer1 =
+        SAMPLE_PEERS[Math.floor(Math.random() * SAMPLE_PEERS.length)];
+      const peer2 =
+        SAMPLE_PEERS[Math.floor(Math.random() * SAMPLE_PEERS.length)];
+      const fresh: StudyGroup = {
+        id: newId(),
+        name: `Study Circle ${trimmed}`,
+        subject: "other",
+        description: "Joined via invite code",
+        inviteCode: trimmed,
+        ownerId: "peer-" + trimmed,
+        members: [
+          { id: "peer-" + trimmed, name: peer1 },
+          { id: "peer2-" + trimmed, name: peer2 },
+          myMember,
+        ],
+        createdAt: Date.now(),
+      };
+      const greeting: GroupMessage = {
+        id: newId(),
+        groupId: fresh.id,
+        authorId: fresh.ownerId,
+        authorName: peer1,
+        content: `Welcome${me?.name ? ", " + me.name : ""}! Glad you joined.`,
+        createdAt: Date.now(),
+      };
+      joined = fresh;
+      return {
+        ...s,
+        groups: [fresh, ...s.groups],
+        messages: [...s.messages, greeting],
+      };
+    });
+    return joined;
+  }, []);
+
+  const leaveGroup: Ctx["leaveGroup"] = useCallback((id) => {
+    setState((s) => ({
+      ...s,
+      groups: s.groups.filter((g) => g.id !== id),
+      messages: s.messages.filter((m) => m.groupId !== id),
+    }));
+  }, []);
+
+  const postMessage: Ctx["postMessage"] = useCallback(
+    (groupId, content, attachment) => {
+      const me = state.user;
+      const msg: GroupMessage = {
+        id: newId(),
+        groupId,
+        authorId: me?.id ?? "you",
+        authorName: me?.name || "You",
+        content,
+        createdAt: Date.now(),
+        attachment,
+      };
+      setState((s) => ({ ...s, messages: [...s.messages, msg] }));
+      return msg;
+    },
+    [state.user],
+  );
+
   const value = useMemo<Ctx>(
     () => ({
       state,
+      signInGuest,
+      signUpEmail,
+      signInEmail,
+      signInGoogle,
+      linkGoogle,
+      unlinkGoogle,
+      updateProfile,
+      signOut,
       addAssignment,
       updateAssignment,
       toggleAssignment,
@@ -339,10 +509,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       clearChat,
       addScan,
       deleteScan,
-      awardXp,
+      createGroup,
+      joinGroupByCode,
+      leaveGroup,
+      postMessage,
     }),
     [
       state,
+      signInGuest,
+      signUpEmail,
+      signInEmail,
+      signInGoogle,
+      linkGoogle,
+      unlinkGoogle,
+      updateProfile,
+      signOut,
       addAssignment,
       updateAssignment,
       toggleAssignment,
@@ -356,7 +537,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       clearChat,
       addScan,
       deleteScan,
-      awardXp,
+      createGroup,
+      joinGroupByCode,
+      leaveGroup,
+      postMessage,
     ],
   );
 

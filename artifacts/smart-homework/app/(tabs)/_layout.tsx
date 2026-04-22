@@ -13,24 +13,24 @@ function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "location.north.line", selected: "location.north.line.fill" }} />
-        <Label>Compass</Label>
+        <Icon sf={{ default: "house", selected: "house.fill" }} />
+        <Label>Home</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
         <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} />
         <Label>Scan</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="plan">
-        <Icon sf={{ default: "calendar", selected: "calendar" }} />
-        <Label>Plan</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="study">
-        <Icon sf={{ default: "rectangle.stack", selected: "rectangle.stack.fill" }} />
+        <Icon sf={{ default: "books.vertical", selected: "books.vertical.fill" }} />
         <Label>Study</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="tutor">
-        <Icon sf={{ default: "sparkles", selected: "sparkles" }} />
-        <Label>Tutor</Label>
+      <NativeTabs.Trigger name="groups">
+        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
+        <Label>Groups</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} />
+        <Label>Profile</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -38,8 +38,6 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -56,7 +54,7 @@ function ClassicTabLayout() {
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : colors.background,
-          borderTopWidth: isWeb ? 1 : 0,
+          borderTopWidth: 1,
           borderTopColor: colors.border,
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
@@ -65,28 +63,28 @@ function ClassicTabLayout() {
           isIOS ? (
             <BlurView
               intensity={100}
-              tint={isDark ? "dark" : "light"}
+              tint="dark"
               style={StyleSheet.absoluteFill}
             />
-          ) : isWeb ? (
+          ) : (
             <View
               style={[
                 StyleSheet.absoluteFill,
                 { backgroundColor: colors.background },
               ]}
             />
-          ) : null,
+          ),
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Compass",
+          title: "Home",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="location.north.line" tintColor={color} size={24} />
+              <SymbolView name="house" tintColor={color} size={24} />
             ) : (
-              <Feather name="compass" size={22} color={color} />
+              <Feather name="home" size={22} color={color} />
             ),
         }}
       />
@@ -103,38 +101,38 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="plan"
-        options={{
-          title: "Plan",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="calendar" tintColor={color} size={24} />
-            ) : (
-              <Feather name="calendar" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
         name="study"
         options={{
           title: "Study",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="rectangle.stack" tintColor={color} size={24} />
+              <SymbolView name="books.vertical" tintColor={color} size={24} />
             ) : (
-              <Feather name="layers" size={22} color={color} />
+              <Feather name="book" size={22} color={color} />
             ),
         }}
       />
       <Tabs.Screen
-        name="tutor"
+        name="groups"
         options={{
-          title: "Tutor",
+          title: "Groups",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="sparkles" tintColor={color} size={24} />
+              <SymbolView name="person.2" tintColor={color} size={24} />
             ) : (
-              <Feather name="message-circle" size={22} color={color} />
+              <Feather name="users" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="person.crop.circle" tintColor={color} size={24} />
+            ) : (
+              <Feather name="user" size={22} color={color} />
             ),
         }}
       />

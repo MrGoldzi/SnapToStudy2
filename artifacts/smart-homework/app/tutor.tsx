@@ -1,10 +1,10 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useCallback, useRef, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EmptyState } from "@/components/EmptyState";
 import { Markdownish } from "@/components/Markdownish";
 import { Pressable } from "@/components/Pressable";
-import { ScreenHeader } from "@/components/ScreenHeader";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { aiChat } from "@/lib/api";
@@ -33,30 +32,21 @@ export default function TutorScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { state, addChatTurn, clearChat } = useApp();
+  const params = useLocalSearchParams<{ send?: string }>();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList<ChatTurn>>(null);
-  const tabBarHeight = Platform.OS === "web" ? 84 : 90;
+  const autoSentRef = useRef(false);
 
-  // Inverted list — newest first
   const data = [...state.chat].reverse();
 
-  const send = useCallback(
-    async (textArg?: string) => {
-      const text = (textArg ?? input).trim();
-      if (!text || sending) return;
-      setInput("");
+  const sendChat = useCallback(
+    async (history: { role: "user" | "assistant"; content: string }[]) => {
       setSending(true);
-      const userTurn = addChatTurn({ role: "user", content: text });
-      // Build messages from history (after add)
-      const history = [...state.chat, userTurn].slice(-12).map((t) => ({
-        role: t.role,
-        content: t.content,
-      }));
       try {
         const reply = await aiChat({ messages: history });
         addChatTurn({ role: "assistant", content: reply || "(no response)" });
-      } catch (err) {
+      } catch {
         addChatTurn({
           role: "assistant",
           content:
@@ -66,47 +56,65 @@ export default function TutorScreen() {
         setSending(false);
       }
     },
-    [input, sending, addChatTurn, state.chat],
+    [addChatTurn],
   );
+
+  const send = useCallback(
+    async (textArg?: string) => {
+      const text = (textArg ?? input).trim();
+      if (!text || sending) return;
+      setInput("");
+      const userTurn = addChatTurn({ role: "user", content: text });
+      const history = [...state.chat, userTurn].slice(-12).map((t) => ({
+        role: t.role,
+        content: t.content,
+      }));
+      await sendChat(history);
+    },
+    [input, sending, addChatTurn, state.chat, sendChat],
+  );
+
+  // Auto-respond when navigated with ?send=1 (a user turn was queued before).
+  useEffect(() => {
+    if (autoSentRef.current) return;
+    if (params.send !== "1") return;
+    if (sending) return;
+    const last = state.chat[state.chat.length - 1];
+    if (!last || last.role !== "user") return;
+    autoSentRef.current = true;
+    const history = state.chat.slice(-12).map((t) => ({
+      role: t.role,
+      content: t.content,
+    }));
+    void sendChat(history);
+  }, [params.send, state.chat, sending, sendChat]);
 
   const onClear = () => {
     if (state.chat.length === 0) return;
     Alert.alert("Clear conversation?", "This can't be undone.", [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Clear",
-        style: "destructive",
-        onPress: () => clearChat(),
-      },
+      { text: "Clear", style: "destructive", onPress: () => clearChat() },
     ]);
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScreenHeader
-        title="AI Tutor"
-        subtitle="Ask anything about your studies"
-        right={
-          <Pressable
-            haptic="light"
-            onPress={onClear}
-            style={({ pressed }) => [
-              styles.headerBtn,
-              {
-                backgroundColor: colors.secondary,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Feather name="rotate-ccw" size={18} color={colors.primary} />
-          </Pressable>
-        }
-      />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={0}
-      >
+      <View style={[styles.topBar, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.topTitle, { color: colors.foreground }]}>
+          AI Tutor
+        </Text>
+        <Pressable
+          haptic="light"
+          onPress={onClear}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Feather name="rotate-ccw" size={16} color={colors.primary} />
+        </Pressable>
+      </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <FlatList
           ref={listRef}
           data={data}
@@ -159,11 +167,7 @@ export default function TutorScreen() {
                       },
                     ]}
                   >
-                    <Feather
-                      name="zap"
-                      size={13}
-                      color={colors.primary}
-                    />
+                    <Feather name="zap" size={13} color={colors.primary} />
                     <Text
                       style={{
                         color: colors.foreground,
@@ -214,7 +218,7 @@ export default function TutorScreen() {
             {
               backgroundColor: colors.background,
               borderTopColor: colors.border,
-              paddingBottom: insets.bottom + (Platform.OS === "web" ? tabBarHeight : 8),
+              paddingBottom: insets.bottom + 8,
             },
           ]}
         >
@@ -247,7 +251,11 @@ export default function TutorScreen() {
                 },
               ]}
             >
-              <Feather name="arrow-up" size={18} color={colors.primaryForeground} />
+              <Feather
+                name="arrow-up"
+                size={18}
+                color={colors.primaryForeground}
+              />
             </Pressable>
           </View>
         </View>
@@ -257,10 +265,22 @@ export default function TutorScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  topTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+  },
+  iconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },

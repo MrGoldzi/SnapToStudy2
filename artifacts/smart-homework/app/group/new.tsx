@@ -16,52 +16,29 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { subjectColor } from "@/components/SubjectChip";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
-import { aiFlashcards } from "@/lib/api";
 import { Subject, SUBJECTS } from "@/lib/types";
 
-export default function NewDeckScreen() {
+export default function NewGroupScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { addDeck, addCards } = useApp();
+  const { createGroup } = useApp();
 
   const [name, setName] = useState("");
   const [subject, setSubject] = useState<Subject>("math");
-  const [topic, setTopic] = useState("");
-  const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [description, setDescription] = useState("");
 
-  const create = async () => {
-    if (!name.trim()) return;
-    if (!topic.trim() && !notes.trim()) {
-      Alert.alert(
-        "Add a topic or notes",
-        "I need something to base the cards on.",
-      );
+  const submit = () => {
+    if (!name.trim()) {
+      Alert.alert("Name required", "Give your study circle a name.");
       return;
     }
-    setBusy(true);
-    try {
-      const cards = await aiFlashcards({
-        topic: topic.trim() || name.trim(),
-        notes: notes.trim() || undefined,
-        count: 8,
-      });
-      if (cards.length === 0) {
-        Alert.alert("No cards generated", "Try a different topic or longer notes.");
-        return;
-      }
-      const deck = addDeck(name.trim(), subject);
-      addCards(deck.id, cards);
-      router.replace(`/deck/${deck.id}` as any);
-    } catch (err) {
-      Alert.alert(
-        "Couldn't create deck",
-        err instanceof Error ? err.message : "Try again.",
-      );
-    } finally {
-      setBusy(false);
-    }
+    const g = createGroup({
+      name: name.trim(),
+      subject,
+      description: description.trim() || undefined,
+    });
+    router.replace(`/group/${g.id}` as any);
   };
 
   return (
@@ -75,16 +52,24 @@ export default function NewDeckScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={[styles.label, { color: colors.mutedForeground }]}>
-        Deck name
+        Group name
       </Text>
       <TextInput
         value={name}
         onChangeText={setName}
-        placeholder="Photosynthesis basics"
+        placeholder="Algebra study buddies"
         placeholderTextColor={colors.mutedForeground}
-        style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+        style={[
+          styles.input,
+          {
+            color: colors.foreground,
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+          },
+        ]}
         autoFocus
       />
+
       <Text style={[styles.label, { color: colors.mutedForeground }]}>Subject</Text>
       <View style={styles.chipsWrap}>
         {SUBJECTS.map((s) => {
@@ -104,26 +89,27 @@ export default function NewDeckScreen() {
                 },
               ]}
             >
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: active ? "#fff" : colors.foreground }}>
+              <Text
+                style={{
+                  fontFamily: "Inter_600SemiBold",
+                  fontSize: 13,
+                  color: active ? "#fff" : colors.foreground,
+                }}
+              >
                 {s.label}
               </Text>
             </Pressable>
           );
         })}
       </View>
-      <Text style={[styles.label, { color: colors.mutedForeground }]}>Topic</Text>
+
+      <Text style={[styles.label, { color: colors.mutedForeground }]}>
+        Description (optional)
+      </Text>
       <TextInput
-        value={topic}
-        onChangeText={setTopic}
-        placeholder="What should the cards cover?"
-        placeholderTextColor={colors.mutedForeground}
-        style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-      />
-      <Text style={[styles.label, { color: colors.mutedForeground }]}>Notes (optional)</Text>
-      <TextInput
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="Paste class notes or definitions to base cards on…"
+        value={description}
+        onChangeText={setDescription}
+        placeholder="What will this group focus on?"
         placeholderTextColor={colors.mutedForeground}
         style={[
           styles.input,
@@ -131,18 +117,18 @@ export default function NewDeckScreen() {
             color: colors.foreground,
             borderColor: colors.border,
             backgroundColor: colors.card,
-            height: 140,
+            height: 100,
             textAlignVertical: "top",
             paddingTop: 14,
           },
         ]}
         multiline
       />
+
       <PrimaryButton
-        title={busy ? "Generating cards…" : "Generate flashcards"}
-        icon="zap"
-        onPress={create}
-        loading={busy}
+        title="Create group"
+        icon="users"
+        onPress={submit}
         disabled={!name.trim()}
         size="lg"
       />
@@ -166,11 +152,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  chipsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
+  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,

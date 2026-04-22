@@ -1,58 +1,68 @@
-# SmartHomework AI
+# SnapToStudy
 
-A modern Expo mobile app that helps students aged 10-18 learn faster: scan a homework problem with the camera and get step-by-step solutions, plan deadlines on a unique compass dashboard, generate AI flashcards with spaced repetition, and chat with an AI tutor.
+A calm, focused Expo (React Native) study app for students aged 10–18. Snap a homework problem with the camera, learn concepts with an AI tutor, build flashcard decks with spaced repetition, and join study groups with chat and resource sharing — all wrapped in a dark, electric-blue aesthetic.
 
 ## Architecture
 
-This is a pnpm monorepo with two artifacts:
+pnpm monorepo with two artifacts:
 
-- **`artifacts/smart-homework`** — the Expo (React Native) mobile app. All app state (assignments, decks, flashcards, chat history, scans, XP/streak) is persisted locally with AsyncStorage. No backend database is used.
-- **`artifacts/api-server`** — Express server that proxies AI requests so the OpenAI API key stays server-side. Two endpoints:
-  - `POST /api/ai/chat` — Multimodal chat (text + optional image base64) for tutor chat and homework scanning. Uses `gpt-5.4`.
-  - `POST /api/ai/flashcards` — Generates a JSON array of flashcards from a topic + optional notes.
+- **`artifacts/smart-homework`** (the SnapToStudy mobile app) — Expo + Expo Router. All app state (user account, decks, cards, scans, chat, study groups, messages) is persisted locally with AsyncStorage. No remote database.
+- **`artifacts/api-server`** — Express server that proxies AI requests so the OpenAI key stays server-side.
+  - `POST /api/ai/chat` — multimodal chat (text + optional image base64) for the tutor and scanner.
+  - `POST /api/ai/flashcards` — generates JSON flashcards from a topic + notes.
 
-The Expo app calls the API via `https://${EXPO_PUBLIC_DOMAIN}/api/...` (the Replit proxy routes `/api` to api-server).
+The app calls these via `https://${EXPO_PUBLIC_DOMAIN}/api/...` (Replit proxy routes `/api` to api-server).
+
+### Auth
+
+- **Welcome → Sign In / Sign Up / Continue as Guest / Continue with Google** all in `app/(auth)/`.
+- Auth state is gated in the root `_layout.tsx` via `useSegments` + `router.replace`: signed-out users are forced into `(auth)`, signed-in users are forced into `(tabs)`.
+- "Continue with Google" presents an in-app sheet that captures the Google name + email and stores `googleLinked: true` on the user. This is a transparent local stand-in for full Google OAuth (which requires a real Google client ID); the rest of the app respects the linked status (Profile shows "Connected", "Disconnect" available).
 
 ### App structure
 
 ```
 app/
+  (auth)/
+    _layout.tsx
+    welcome.tsx     # hero + glowing orb + Get Started / Sign In / Continue as Guest
+    sign-in.tsx     # Google + email/password
+    sign-up.tsx     # Google + name/email/password
   (tabs)/
-    _layout.tsx          # NativeTabs (iOS 26 liquid glass) with Tabs fallback
-    index.tsx            # Compass dashboard (N urgent / E upcoming / S weak / W done)
-    scan.tsx             # Camera + gallery picker → AI solver
-    plan.tsx             # Filterable deadline planner
-    study.tsx            # Flashcard deck list with mastery + due counts
-    tutor.tsx            # Inverted chat list with markdown answers
-  scan-result.tsx        # Modal: photo + step-by-step AI solution
-  assignment/new.tsx     # Modal: create assignment
-  assignment/[id].tsx    # Detail + AI hint/plan/concepts buttons
-  deck/new.tsx           # Modal: name + topic/notes → AI-generated cards
-  deck/[id]/index.tsx    # Deck detail + start review
-  deck/[id]/review.tsx   # SM-2 lite spaced repetition session
-contexts/AppContext.tsx  # Single AsyncStorage-backed state container
-components/              # Card, PrimaryButton, Pressable (haptics), EmptyState,
-                         # SubjectChip, ScreenHeader, Markdownish (lightweight md)
-lib/                     # api.ts, types.ts (Subject, Assignment, Flashcard, etc), id.ts
-constants/colors.ts      # Indigo + amber palette, light + dark
+    _layout.tsx     # 5 tabs: Home, Scan, Study, Groups, Profile (NativeTabs on iOS 26+)
+    index.tsx       # Greeting + glowing orb (→ tutor) + quick chips + today's tasks + recent scans + sticky "Ask anything"
+    scan.tsx        # Camera-first big shutter + gallery picker + recent scans
+    study.tsx       # AI Study Modes (concept / practice / quiz / summarize) + deck list
+    groups.tsx      # Study groups list + Create / Join with code
+    profile.tsx     # User card + stats + Google connection + settings + Sign out
+  tutor.tsx         # Modal: AI chat with markdown answers, auto-sends queued user prompt
+  scan-result.tsx   # Modal: photo + step-by-step solution
+  assignment/new.tsx, assignment/[id].tsx
+  deck/new.tsx, deck/[id]/index.tsx, deck/[id]/review.tsx
+  group/new.tsx, group/join.tsx, group/[id].tsx  # group chat + share decks/scans + invite code modal
+contexts/AppContext.tsx  # AsyncStorage-backed state: user, assignments, decks, cards, chat, scans, groups, messages
+components/              # Card, PrimaryButton, Pressable (haptics), EmptyState, SubjectChip, ScreenHeader,
+                         # Markdownish, GlowingOrb (svg rings + halo), GoogleAuthSheet
+lib/                     # api.ts, types.ts (User, Assignment, Flashcard, Deck, ChatTurn, ScanResult, StudyGroup, GroupMessage), id.ts
+constants/colors.ts      # Dark navy (#070b1a) + electric blue (#3b82f6) palette (single dark theme)
 ```
 
-### Gamification
+### Study Groups
 
-Each scan, completed assignment, and flashcard review awards XP. XP rolls into levels (`100 + 50*(level-1)`) and a daily streak that increments on any active day.
+- Create a group (name + subject + description) → generates a 6-character invite code.
+- Join with code → if a local group has that code you join it; otherwise a fresh "Study Circle <CODE>" is created with two simulated peers and a welcome message so the chat feels alive immediately.
+- Group chat: text messages, share a deck or recent scan via the paperclip → bottom sheet, info modal shows the invite code (with copy) + member list + Leave group.
 
 ### Spaced repetition
 
-A simplified SM-2: each review records a quality score (0/3/5). Wrong answers reset interval to 0 and reduce ease; right answers grow the interval (1d → 3d → ease-multiplied) and tweak ease. The compass "Weak Areas" quadrant aggregates correctness rates per subject.
+Simplified SM-2: each review records 0/3/5 quality. Wrong answers reset interval and reduce ease; right answers grow the interval (1d → 3d → ease-multiplied) and tweak ease.
+
+### What's intentionally not here
+
+- **No gamification.** No XP, no streaks, no levels, no badges.
+- **No remote DB.** Everything lives on-device for a private, offline-friendly experience.
+- **No emojis.** All icons come from `@expo/vector-icons` (Feather) or SF Symbols.
 
 ## AI Integration
 
-OpenAI is wired through Replit AI Integrations — no user-managed API key required. The api-server reads `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` from the environment and POSTs to `${BASE_URL}/chat/completions` directly with `fetch`.
-
-## Notable choices
-
-- **No database.** All persistence is AsyncStorage — keeps the first build lean and offline-friendly.
-- **Express body limit raised to 25 MB** so base64 photos can be POSTed.
-- **iOS 26 NativeTabs** with classic Tabs fallback for older OS / Android / web.
-- **Inter font family** (400/500/600/700) loaded via `@expo-google-fonts/inter`.
-- **No emojis** — every icon comes from `@expo/vector-icons` (Feather) or SF Symbols.
+Wired through Replit AI Integrations — no user-managed API key. The api-server reads `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` and POSTs to `${BASE_URL}/chat/completions`.
