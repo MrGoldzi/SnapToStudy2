@@ -1,5 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -15,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { GlowingOrb } from "@/components/GlowingOrb";
 import { Pressable } from "@/components/Pressable";
+import { ScreenBackground } from "@/components/ScreenBackground";
 import { SubjectChip } from "@/components/SubjectChip";
 import { VoiceMode } from "@/components/VoiceMode";
 import { useApp } from "@/contexts/AppContext";
@@ -55,11 +55,7 @@ export default function HomeScreen() {
   const firstName = (state.user?.name || "there").split(" ")[0];
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <LinearGradient
-        colors={["#0d1840", "#070b1a"]}
-        style={[StyleSheet.absoluteFill, { height: 360 }]}
-      />
+    <ScreenBackground variant="hero" style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 16,
@@ -305,7 +301,7 @@ export default function HomeScreen() {
         </View>
       </View>
       <VoiceMode visible={voiceOpen} onClose={() => setVoiceOpen(false)} />
-    </View>
+    </ScreenBackground>
   );
 }
 

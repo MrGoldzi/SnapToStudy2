@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Pressable } from "@/components/Pressable";
+import { ScreenBackground } from "@/components/ScreenBackground";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SubjectChip, subjectColor } from "@/components/SubjectChip";
 import { useApp } from "@/contexts/AppContext";
@@ -80,7 +81,7 @@ export default function StudyScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScreenBackground style={{ flex: 1 }}>
       <ScreenHeader
         title="Study"
         subtitle="Pick a mode or open a deck"
@@ -209,7 +210,7 @@ export default function StudyScreen() {
           ))
         )}
       </ScrollView>
-    </View>
+    </ScreenBackground>
   );
 }
 

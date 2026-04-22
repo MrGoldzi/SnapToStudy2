@@ -23,11 +23,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlowingOrb } from "@/components/GlowingOrb";
 import { Markdownish } from "@/components/Markdownish";
 import { Pressable } from "@/components/Pressable";
+import { ScreenBackground } from "@/components/ScreenBackground";
 import { VoiceMode } from "@/components/VoiceMode";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
-import { aiChat } from "@/lib/api";
-import { ChatTurn } from "@/lib/types";
+import { aiChat, aiFlashcards } from "@/lib/api";
+import { ChatTurn, type Subject } from "@/lib/types";
 
 type QuickAction = {
   label: string;
@@ -37,9 +38,9 @@ type QuickAction = {
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    label: "Study",
-    icon: "book-open",
-    prompt: "Help me study a topic. Ask me what subject I want to start with.",
+    label: "Flashcards",
+    icon: "layers",
+    prompt: "Make me 8 flashcards on photosynthesis",
   },
   {
     label: "Solve Math",
@@ -59,11 +60,37 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
+const FLASHCARD_RE =
+  /\b(?:make|create|generate|build|give\s+me|prepare)\s+(?:some\s+|a\s+set\s+of\s+|a\s+deck\s+of\s+)?(\d+\s+)?flash\s?cards?(?:\s+(?:on|about|for|of|covering|from|to\s+study)\s+(.+?))?\s*[.!?]?$/i;
+
+function guessSubject(text: string): Subject {
+  const t = text.toLowerCase();
+  if (/\b(math|algebra|calculus|geometry|trig|equation|number)\b/.test(t)) return "math";
+  if (/\b(physics|force|energy|motion|gravity)\b/.test(t)) return "physics";
+  if (/\b(chem|chemistry|reaction|molecule|atom|bond)\b/.test(t)) return "chemistry";
+  if (/\b(bio|biology|cell|dna|gene|organism|photosynth)\b/.test(t)) return "biology";
+  if (/\b(history|war|ancient|empire|revolution|king|queen|treaty)\b/.test(t)) return "history";
+  if (/\b(english|grammar|literature|poem|essay|writing)\b/.test(t)) return "english";
+  if (/\b(spanish|french|german|chinese|japanese|language|vocabulary|verb|noun)\b/.test(t)) return "language";
+  if (/\b(art|paint|music|sculpt)\b/.test(t)) return "art";
+  if (/\b(science)\b/.test(t)) return "science";
+  return "other";
+}
+
+function titleCase(s: string): string {
+  return s
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
 export default function TutorScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state, addChatTurn, clearChat } = useApp();
+  const { state, addChatTurn, clearChat, addDeck, addCards } = useApp();
   const params = useLocalSearchParams<{ send?: string }>();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -99,19 +126,80 @@ export default function TutorScreen() {
     [addChatTurn],
   );
 
+  const buildFlashcards = useCallback(
+    async (rawTopic: string, count: number) => {
+      setSending(true);
+      try {
+        const cards = await aiFlashcards({
+          topic: rawTopic,
+          count: Math.min(Math.max(count, 3), 20),
+        });
+        if (!cards.length) {
+          addChatTurn({
+            role: "assistant",
+            content:
+              "I couldn't generate flashcards for that. Try giving me a more specific topic.",
+          });
+          return;
+        }
+        const subject = guessSubject(rawTopic);
+        const deckName = titleCase(rawTopic).slice(0, 60) || "New Deck";
+        const deck = addDeck(deckName, subject);
+        addCards(deck.id, cards);
+        addChatTurn({
+          role: "assistant",
+          content: `Done! I created **${deckName}** with ${cards.length} cards.\n\nOpen the **Study** tab to start reviewing, or tap the deck to jump in.\n\n_Sample card:_\n**Q:** ${cards[0].question}\n**A:** ${cards[0].answer}`,
+        });
+      } catch {
+        addChatTurn({
+          role: "assistant",
+          content:
+            "Sorry, I couldn't make flashcards just now. Please try again.",
+        });
+      } finally {
+        setSending(false);
+      }
+    },
+    [addCards, addChatTurn, addDeck],
+  );
+
   const send = useCallback(
     async (textArg?: string) => {
       const text = (textArg ?? input).trim();
       if (!text || sending) return;
       setInput("");
-      const userTurn = addChatTurn({ role: "user", content: text });
-      const history = [...state.chat, userTurn].slice(-12).map((t) => ({
-        role: t.role,
-        content: t.content,
-      }));
+      addChatTurn({ role: "user", content: text });
+
+      // Detect "make flashcards on X" intent
+      const m = text.match(FLASHCARD_RE);
+      if (m) {
+        const count = m[1] ? parseInt(m[1].trim(), 10) : 8;
+        const topic = (m[2] ?? "")
+          .trim()
+          .replace(/^["'`]|["'`]$/g, "")
+          .replace(/\s+please$/i, "");
+        if (topic) {
+          await buildFlashcards(topic, count);
+          return;
+        }
+        // No topic — ask for one
+        addChatTurn({
+          role: "assistant",
+          content:
+            "Sure — what topic should the flashcards cover? (e.g. *photosynthesis*, *WW2 timeline*, *limits in calculus*)",
+        });
+        return;
+      }
+
+      const history = [
+        ...state.chat,
+        { role: "user" as const, content: text },
+      ]
+        .slice(-12)
+        .map((t) => ({ role: t.role, content: t.content }));
       await sendChat(history);
     },
-    [input, sending, addChatTurn, state.chat, sendChat],
+    [input, sending, addChatTurn, state.chat, sendChat, buildFlashcards],
   );
 
   // Auto-respond when navigated with ?send=1
@@ -143,7 +231,7 @@ export default function TutorScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScreenBackground variant="hero" style={{ flex: 1 }}>
       {/* Header */}
       <View
         style={[
@@ -335,7 +423,7 @@ export default function TutorScreen() {
         onClose={() => setVoiceOpen(false)}
         title="Voice Tutor"
       />
-    </View>
+    </ScreenBackground>
   );
 }
 

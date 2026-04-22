@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { Markdownish } from "@/components/Markdownish";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { ScreenBackground } from "@/components/ScreenBackground";
 import { VoiceMode } from "@/components/VoiceMode";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
@@ -53,7 +54,7 @@ export default function ScanResultScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScreenBackground style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -92,7 +93,7 @@ export default function ScanResultScreen() {
         title="Talk about this scan"
         context={scan.content}
       />
-    </View>
+    </ScreenBackground>
   );
 }
 

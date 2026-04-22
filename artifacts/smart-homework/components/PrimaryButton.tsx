@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
   ActivityIndicator,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -35,13 +37,60 @@ export function PrimaryButton({
   const colors = useColors();
   const isDisabled = disabled || loading;
 
-  let bg = colors.primary;
-  let fg = colors.primaryForeground;
+  const padV = size === "lg" ? 16 : 13;
+  const padH = size === "lg" ? 24 : 18;
+
+  if (variant === "primary") {
+    return (
+      <Pressable
+        haptic="medium"
+        onPress={isDisabled ? undefined : onPress}
+        style={({ pressed }) => [
+          styles.btnWrap,
+          {
+            opacity: isDisabled ? 0.5 : 1,
+            transform: [{ scale: pressed ? 0.98 : 1 }],
+            shadowColor: colors.primary,
+          },
+          style,
+        ]}
+      >
+        <LinearGradient
+          colors={["#60a5fa", "#3b82f6", "#1d4ed8"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[
+            styles.gradient,
+            { paddingVertical: padV, paddingHorizontal: padH },
+          ]}
+        >
+          <View style={styles.row}>
+            {loading ? (
+              <ActivityIndicator color={colors.primaryForeground} size="small" />
+            ) : icon ? (
+              <Feather name={icon} size={18} color={colors.primaryForeground} />
+            ) : null}
+            <Text
+              style={[
+                styles.text,
+                {
+                  color: colors.primaryForeground,
+                  fontSize: size === "lg" ? 17 : 15,
+                },
+              ]}
+            >
+              {title}
+            </Text>
+          </View>
+        </LinearGradient>
+      </Pressable>
+    );
+  }
+
+  let bg = colors.secondary;
+  let fg = colors.secondaryForeground;
   let border = "transparent";
-  if (variant === "secondary") {
-    bg = colors.secondary;
-    fg = colors.secondaryForeground;
-  } else if (variant === "ghost") {
+  if (variant === "ghost") {
     bg = "transparent";
     fg = colors.foreground;
     border = colors.border;
@@ -52,13 +101,13 @@ export function PrimaryButton({
       haptic="medium"
       onPress={isDisabled ? undefined : onPress}
       style={({ pressed }) => [
-        styles.btn,
+        styles.btnFlat,
         {
           backgroundColor: bg,
           borderColor: border,
           opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
-          paddingVertical: size === "lg" ? 16 : 12,
-          paddingHorizontal: size === "lg" ? 24 : 18,
+          paddingVertical: padV,
+          paddingHorizontal: padH,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },
         style,
@@ -84,7 +133,25 @@ export function PrimaryButton({
 }
 
 const styles = StyleSheet.create({
-  btn: {
+  btnWrap: {
+    borderRadius: 16,
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowOpacity: 0.32,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 8 },
+      },
+      android: { elevation: 4 },
+      default: {},
+    }),
+  },
+  gradient: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+  },
+  btnFlat: {
     borderRadius: 14,
     borderWidth: 1,
     alignItems: "center",
@@ -96,6 +163,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   text: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.1,
   },
 });
