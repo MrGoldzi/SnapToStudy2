@@ -1,27 +1,58 @@
-# Workspace
+# SmartHomework AI
 
-## Overview
+A modern Expo mobile app that helps students aged 10-18 learn faster: scan a homework problem with the camera and get step-by-step solutions, plan deadlines on a unique compass dashboard, generate AI flashcards with spaced repetition, and chat with an AI tutor.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+## Architecture
 
-## Stack
+This is a pnpm monorepo with two artifacts:
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **`artifacts/smart-homework`** — the Expo (React Native) mobile app. All app state (assignments, decks, flashcards, chat history, scans, XP/streak) is persisted locally with AsyncStorage. No backend database is used.
+- **`artifacts/api-server`** — Express server that proxies AI requests so the OpenAI API key stays server-side. Two endpoints:
+  - `POST /api/ai/chat` — Multimodal chat (text + optional image base64) for tutor chat and homework scanning. Uses `gpt-5.4`.
+  - `POST /api/ai/flashcards` — Generates a JSON array of flashcards from a topic + optional notes.
 
-## Key Commands
+The Expo app calls the API via `https://${EXPO_PUBLIC_DOMAIN}/api/...` (the Replit proxy routes `/api` to api-server).
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
+### App structure
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+```
+app/
+  (tabs)/
+    _layout.tsx          # NativeTabs (iOS 26 liquid glass) with Tabs fallback
+    index.tsx            # Compass dashboard (N urgent / E upcoming / S weak / W done)
+    scan.tsx             # Camera + gallery picker → AI solver
+    plan.tsx             # Filterable deadline planner
+    study.tsx            # Flashcard deck list with mastery + due counts
+    tutor.tsx            # Inverted chat list with markdown answers
+  scan-result.tsx        # Modal: photo + step-by-step AI solution
+  assignment/new.tsx     # Modal: create assignment
+  assignment/[id].tsx    # Detail + AI hint/plan/concepts buttons
+  deck/new.tsx           # Modal: name + topic/notes → AI-generated cards
+  deck/[id]/index.tsx    # Deck detail + start review
+  deck/[id]/review.tsx   # SM-2 lite spaced repetition session
+contexts/AppContext.tsx  # Single AsyncStorage-backed state container
+components/              # Card, PrimaryButton, Pressable (haptics), EmptyState,
+                         # SubjectChip, ScreenHeader, Markdownish (lightweight md)
+lib/                     # api.ts, types.ts (Subject, Assignment, Flashcard, etc), id.ts
+constants/colors.ts      # Indigo + amber palette, light + dark
+```
+
+### Gamification
+
+Each scan, completed assignment, and flashcard review awards XP. XP rolls into levels (`100 + 50*(level-1)`) and a daily streak that increments on any active day.
+
+### Spaced repetition
+
+A simplified SM-2: each review records a quality score (0/3/5). Wrong answers reset interval to 0 and reduce ease; right answers grow the interval (1d → 3d → ease-multiplied) and tweak ease. The compass "Weak Areas" quadrant aggregates correctness rates per subject.
+
+## AI Integration
+
+OpenAI is wired through Replit AI Integrations — no user-managed API key required. The api-server reads `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` from the environment and POSTs to `${BASE_URL}/chat/completions` directly with `fetch`.
+
+## Notable choices
+
+- **No database.** All persistence is AsyncStorage — keeps the first build lean and offline-friendly.
+- **Express body limit raised to 25 MB** so base64 photos can be POSTed.
+- **iOS 26 NativeTabs** with classic Tabs fallback for older OS / Android / web.
+- **Inter font family** (400/500/600/700) loaded via `@expo-google-fonts/inter`.
+- **No emojis** — every icon comes from `@expo/vector-icons` (Feather) or SF Symbols.

@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "_WsntLMnPPOr6gN6VuLYw"
+uri = "file://artifacts/smart-homework/assets/images/icon.png"
+type = "image"
+title = "smart homework icon"
+
+[[generated]]
+id = "HXTCKhOK40j6QXj4xeXvC"
+uri = "file://artifacts/smart-homework/assets/images/welcome-bg.png"
+type = "image"
+title = "welcome gradient"

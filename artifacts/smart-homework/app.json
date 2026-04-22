@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "SmartHomework AI",
+    "slug": "smart-homework",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "smart-homework",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f0a1f"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "SmartHomework AI uses your camera to scan homework problems and get step-by-step solutions.",
+        "NSPhotoLibraryUsageDescription": "SmartHomework AI needs access to your photos so you can scan saved homework images."
+      }
+    },
+    "android": {
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SmartHomework AI needs access to your photos so you can scan saved homework images.",
+          "cameraPermission": "SmartHomework AI uses your camera to scan homework problems and get step-by-step solutions."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
