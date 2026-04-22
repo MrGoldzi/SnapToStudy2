@@ -1,0 +1,79 @@
+AI UI + Functionality Refinement Prompt:
+
+Improve and refine the existing SmartHomework AI application using:
+
+the current implemented UI and features
+and the provided reference images as visual inspiration
+
+The goal is to enhance the product without changing its core identity, while fixing issues and adding missing functionality in a seamless way.
+
+1. UI Enhancement (Based on Existing + Reference Images)
+Improve the current UI while staying consistent with the existing design system
+Use the reference images as stylistic inspiration only (layout, spacing, visual tone)
+Upgrade:
+Typography hierarchy
+Spacing and alignment
+Card layouts and shadows
+Button styles and interactions
+Keep the app recognizable, do NOT redesign from scratch
+2. Orb Component Improvement
+Enhance the existing AI Orb element:
+Smoother animations and transitions
+Better visual feedback for states:
+Idle
+Listening
+Processing
+Responding
+More polished glow/energy effect
+Ensure it integrates naturally into the current UI instead of feeling separate
+3. Fix Broken Features
+Identify and fix any broken or inconsistent functions
+Ensure all core features work reliably:
+Homework scanning
+AI responses
+Study tools
+Group system
+Fix missing outputs, crashes, or incomplete UI states
+4. Cross-Platform UI Fix (Critical Issue)
+iOS version works correctly
+Web mobile view has layout issues that must be fixed:
+Ensure responsive design across all screen sizes
+Prevent overlapping or cut-off elements
+Fix scaling of text, cards, and images
+Maintain consistent UI between iOS and web
+Priority: mobile web experience must match native app quality
+5. Add Voice Mode (Integrated Cleanly)
+
+Add a fully integrated Voice Mode:
+
+Users can speak to the AI instead of typing
+AI responds using voice output (text-to-speech)
+Voice interactions should connect with the Orb UI
+Voice states:
+Listening
+Processing
+Speaking
+Add voice access in:
+Home screen
+AI chat / tutor
+Scan result screen
+Allow seamless switching between:
+Text mode
+Voice mode
+6. Integration Rules
+All improvements must blend into the existing app structure
+Do not break current workflows or redesign the app identity
+Maintain consistency with both:
+Existing UI implementation
+Reference image styling
+Keep code modular, stable, and production-ready
+Goal:
+
+Deliver a polished, fully responsive, and stable upgrade of the current app that:
+
+Improves UI quality (without changing identity)
+Enhances the Orb interaction system
+Fixes broken features
+Fixes web mobile responsiveness
+Adds fully working voice mode
+Feels like a refined version of the existing product, not a rebuild

@@ -46,7 +46,8 @@
           "photosPermission": "SnapToStudy needs access to your photos so you can scan saved homework images.",
           "cameraPermission": "SnapToStudy uses your camera to scan homework problems and get step-by-step solutions."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

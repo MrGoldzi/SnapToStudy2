@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EmptyState } from "@/components/EmptyState";
 import { Markdownish } from "@/components/Markdownish";
 import { Pressable } from "@/components/Pressable";
+import { VoiceMode } from "@/components/VoiceMode";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { aiChat } from "@/lib/api";
@@ -35,6 +36,7 @@ export default function TutorScreen() {
   const params = useLocalSearchParams<{ send?: string }>();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const listRef = useRef<FlatList<ChatTurn>>(null);
   const autoSentRef = useRef(false);
 
@@ -103,16 +105,28 @@ export default function TutorScreen() {
         <Text style={[styles.topTitle, { color: colors.foreground }]}>
           AI Tutor
         </Text>
-        <Pressable
-          haptic="light"
-          onPress={onClear}
-          style={({ pressed }) => [
-            styles.iconBtn,
-            { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Feather name="rotate-ccw" size={16} color={colors.primary} />
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            haptic="medium"
+            onPress={() => setVoiceOpen(true)}
+            style={({ pressed }) => [
+              styles.iconBtn,
+              { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Feather name="mic" size={16} color={colors.primaryForeground} />
+          </Pressable>
+          <Pressable
+            haptic="light"
+            onPress={onClear}
+            style={({ pressed }) => [
+              styles.iconBtn,
+              { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Feather name="rotate-ccw" size={16} color={colors.primary} />
+          </Pressable>
+        </View>
       </View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <FlatList
@@ -260,6 +274,11 @@ export default function TutorScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+      <VoiceMode
+        visible={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        title="Voice Tutor"
+      />
     </View>
   );
 }

@@ -16,6 +16,7 @@ import { Card } from "@/components/Card";
 import { GlowingOrb } from "@/components/GlowingOrb";
 import { Pressable } from "@/components/Pressable";
 import { SubjectChip } from "@/components/SubjectChip";
+import { VoiceMode } from "@/components/VoiceMode";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -32,7 +33,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const { state, addChatTurn } = useApp();
   const [ask, setAsk] = useState("");
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const tabBarHeight = Platform.OS === "web" ? 84 : 90;
+  const composerHeight = 64;
 
   const today = state.assignments
     .filter((a) => !a.done)
@@ -60,7 +63,7 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 16,
-          paddingBottom: insets.bottom + tabBarHeight + 24,
+          paddingBottom: insets.bottom + tabBarHeight + composerHeight + 24,
           paddingHorizontal: 20,
           gap: 18,
         }}
@@ -86,19 +89,75 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <Pressable
-          haptic="medium"
-          onPress={() => router.push("/tutor")}
-          style={({ pressed }) => [
-            styles.orbWrap,
-            { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
-          ]}
-        >
-          <GlowingOrb maxFraction={0.5} maxSize={220} />
+        <View style={styles.orbWrap}>
+          <Pressable
+            haptic="medium"
+            onPress={() => setVoiceOpen(true)}
+            style={({ pressed }) => [
+              {
+                opacity: pressed ? 0.85 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+          >
+            <GlowingOrb maxFraction={0.5} maxSize={220} state="idle" />
+          </Pressable>
           <Text style={[styles.orbHint, { color: colors.mutedForeground }]}>
-            Tap to start a tutor chat
+            Tap the orb to talk · or type below
           </Text>
-        </Pressable>
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+            <Pressable
+              haptic="selection"
+              onPress={() => setVoiceOpen(true)}
+              style={({ pressed }) => [
+                styles.modeBtn,
+                {
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <Feather name="mic" size={14} color={colors.primaryForeground} />
+              <Text
+                style={{
+                  color: colors.primaryForeground,
+                  fontFamily: "Inter_700Bold",
+                  fontSize: 12,
+                }}
+              >
+                Voice
+              </Text>
+            </Pressable>
+            <Pressable
+              haptic="selection"
+              onPress={() => router.push("/tutor")}
+              style={({ pressed }) => [
+                styles.modeBtn,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <Feather
+                name="message-circle"
+                size={14}
+                color={colors.foreground}
+              />
+              <Text
+                style={{
+                  color: colors.foreground,
+                  fontFamily: "Inter_700Bold",
+                  fontSize: 12,
+                }}
+              >
+                Chat
+              </Text>
+            </Pressable>
+          </View>
+        </View>
 
         <View style={styles.quickGrid}>
           {QUICK.map((q) => (
@@ -245,6 +304,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       </View>
+      <VoiceMode visible={voiceOpen} onClose={() => setVoiceOpen(false)} />
     </View>
   );
 }
@@ -318,11 +378,19 @@ const styles = StyleSheet.create({
   orbWrap: {
     alignItems: "center",
     paddingVertical: 8,
-    gap: 6,
+    gap: 8,
   },
   orbHint: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
+  },
+  modeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
   quickGrid: {
     flexDirection: "row",

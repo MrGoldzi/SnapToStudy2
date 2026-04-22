@@ -1,12 +1,13 @@
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Card } from "@/components/Card";
 import { Markdownish } from "@/components/Markdownish";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { VoiceMode } from "@/components/VoiceMode";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -16,6 +17,7 @@ export default function ScanResultScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { state, addChatTurn } = useApp();
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   const scan = state.scans.find((s) => s.id === id);
 
@@ -51,28 +53,46 @@ export default function ScanResultScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{
-        padding: 16,
-        paddingBottom: insets.bottom + 32,
-        gap: 14,
-      }}
-    >
-      <Image
-        source={{ uri: scan.imageUri }}
-        style={[styles.preview, { backgroundColor: colors.muted }]}
-        contentFit="cover"
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: insets.bottom + 32,
+          gap: 14,
+        }}
+      >
+        <Image
+          source={{ uri: scan.imageUri }}
+          style={[styles.preview, { backgroundColor: colors.muted }]}
+          contentFit="cover"
+        />
+        <Card>
+          <Markdownish text={scan.content} />
+        </Card>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <PrimaryButton
+            title="Talk it through"
+            icon="mic"
+            onPress={() => setVoiceOpen(true)}
+            style={{ flex: 1 }}
+          />
+          <PrimaryButton
+            title="Ask follow-up"
+            icon="message-circle"
+            variant="secondary"
+            onPress={askTutor}
+            style={{ flex: 1 }}
+          />
+        </View>
+      </ScrollView>
+      <VoiceMode
+        visible={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        title="Talk about this scan"
+        context={scan.content}
       />
-      <Card>
-        <Markdownish text={scan.content} />
-      </Card>
-      <PrimaryButton
-        title="Ask the Tutor a follow-up"
-        icon="message-circle"
-        onPress={askTutor}
-      />
-    </ScrollView>
+    </View>
   );
 }
 

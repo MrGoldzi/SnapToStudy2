@@ -211,4 +211,120 @@ router.post("/ai/flashcards", async (req, res) => {
   }
 });
 
+// ====== VOICE / AUDIO ======
+
+type TranscribeBody = {
+  audioBase64?: string;
+  mimeType?: string;
+};
+
+router.post("/ai/transcribe", async (req, res) => {
+  const baseUrl = process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"];
+  const apiKey = process.env["AI_INTEGRATIONS_OPENAI_API_KEY"];
+  if (!baseUrl || !apiKey) {
+    res.status(500).json({ error: "AI integration not configured" });
+    return;
+  }
+  const body = (req.body ?? {}) as TranscribeBody;
+  if (!body.audioBase64) {
+    res.status(400).json({ error: "audioBase64 required" });
+    return;
+  }
+  const mime = body.mimeType || "audio/webm";
+  let ext = "webm";
+  if (mime.includes("mp4") || mime.includes("m4a")) ext = "mp4";
+  else if (mime.includes("wav")) ext = "wav";
+  else if (mime.includes("mpeg") || mime.includes("mp3")) ext = "mp3";
+  else if (mime.includes("ogg")) ext = "ogg";
+
+  try {
+    const audioBuffer = Buffer.from(body.audioBase64, "base64");
+    const blob = new Blob([new Uint8Array(audioBuffer)], { type: mime });
+    const form = new FormData();
+    form.append("file", blob, `audio.${ext}`);
+    form.append("model", "gpt-4o-mini-transcribe");
+
+    const upstreamRes = await fetch(`${baseUrl}/audio/transcriptions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    });
+    if (!upstreamRes.ok) {
+      const text = await upstreamRes.text();
+      req.log.error({ status: upstreamRes.status, text }, "Transcribe error");
+      res.status(502).json({ error: "Transcription failed" });
+      return;
+    }
+    const data = (await upstreamRes.json()) as { text?: string };
+    res.json({ text: data.text ?? "" });
+  } catch (err) {
+    req.log.error({ err }, "Transcribe error");
+    res.status(500).json({ error: "Transcription failed" });
+  }
+});
+
+type TtsBody = { text?: string; voice?: string };
+
+router.post("/ai/tts", async (req, res) => {
+  const baseUrl = process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"];
+  const apiKey = process.env["AI_INTEGRATIONS_OPENAI_API_KEY"];
+  if (!baseUrl || !apiKey) {
+    res.status(500).json({ error: "AI integration not configured" });
+    return;
+  }
+  const body = (req.body ?? {}) as TtsBody;
+  const text = (body.text ?? "").toString().slice(0, 4000).trim();
+  if (!text) {
+    res.status(400).json({ error: "text required" });
+    return;
+  }
+  const voice = (body.voice as
+    | "alloy"
+    | "echo"
+    | "fable"
+    | "onyx"
+    | "nova"
+    | "shimmer"
+    | undefined) || "nova";
+
+  try {
+    const upstreamRes = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-audio",
+        modalities: ["text", "audio"],
+        audio: { voice, format: "mp3" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a friendly tutor reading aloud. Speak the text verbatim, in a warm encouraging tone.",
+          },
+          { role: "user", content: `Read this aloud: ${text}` },
+        ],
+      }),
+    });
+    if (!upstreamRes.ok) {
+      const errText = await upstreamRes.text();
+      req.log.error({ status: upstreamRes.status, errText }, "TTS error");
+      res.status(502).json({ error: "TTS failed" });
+      return;
+    }
+    const data = (await upstreamRes.json()) as {
+      choices?: Array<{
+        message?: { audio?: { data?: string; transcript?: string } };
+      }>;
+    };
+    const audioBase64 = data.choices?.[0]?.message?.audio?.data ?? "";
+    res.json({ audioBase64, mimeType: "audio/mp3" });
+  } catch (err) {
+    req.log.error({ err }, "TTS error");
+    res.status(500).json({ error: "TTS failed" });
+  }
+});
+
 export default router;
